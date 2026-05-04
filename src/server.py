@@ -10,7 +10,7 @@ from starlette.routing import Route
 from pydantic.types import Json
 import uvicorn
 import typer
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 from mcp.server import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from poke_client import PokeClient, PokeClientSettings
@@ -29,20 +29,35 @@ class PokemonMCPServer:
 
 
     def register_tools(self):
-        @self.server.tool()
-        def greet_pokemon_user(name: str) -> str:
+        @self.server.tool(
+                name="greet_pokemon_user",
+                description="Tool to greet the pokemon user"
+        )
+        async def greet_pokemon_user(name: str, ctx: Context) -> str:
             try:
+                await ctx.info(f"Here is the context for greet {ctx}")
                 return f"Hello {name}, Welcome to Pokemon MCP Server"
             except Exception as e:
                 logging.error(f"Failed to get pokemon data: {e}")
                 return {"error": str(e)}
 
-        @self.server.tool()
-        def get_pokemon(name: str) -> Json:
+        @self.server.tool(
+                name="get_pokemon",
+                description="Tool to get pokemon data",
+        )
+        async def get_pokemon(name: str, ctx: Context) -> Json:
             try:
-                return self.poke_client.get_pokemon_data(name)
+                await ctx.info(f"Here is the context for get pokemon")
+                logging.info("Context looks like this -> ", ctx)
+                data = self.poke_client.get_pokemon_data(name)
+                return data
             except Exception as e:
                 logging.error(f"Failed to get pokemon data: {e}")
+                result = await ctx.elicit(
+                    message = "Looks like the pokemon is not found! Could you please clarify the name?"
+                )
+                if result:
+                    
                 return {"error": str(e)}
 
 
